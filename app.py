@@ -5,20 +5,10 @@ st.set_page_config(
     layout="wide"
 )
 
-with st.sidebar:
-    st.title("PDF SMART")
-    st.write("Phiên bản nội bộ v1.0")
+st.title("🚀 PDF SMART")
 
-    page = st.radio(
-        "MENU CHỨC NĂNG",
-        [
-            "Trang Chủ",
-            "Tự Động Hóa Hồ Sơ",
-            "Tiện Ích PDF",
-            "Tách PDF Thông Minh",
-            "Tách PDF theo Excel",
-            "Đổi tên PDF Scan (Folder)"
-        ]
-    )
+st.write("""
+Chào mừng đến với hệ thống PDF SMART.
 
-st.title("Trang Chủ")
+Chọn chức năng ở menu bên trái.
+""")
