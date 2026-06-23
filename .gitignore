@@ -1,16 +1,27 @@
-.venv/
+# Python
 __pycache__/
 *.pyc
 
-temp/
-output/
+# Virtual env
+.venv/
+venv/
 
-.idea/
-.vscode/
-
-*.zip
-*.pdf
-*.xlsx
-*.xls
-
+# Streamlit
 .streamlit/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Temp files
+temp/
+tmp/
+output/
+output_split_scan/
+
+# OS
+Thumbs.db
+.DS_Store
