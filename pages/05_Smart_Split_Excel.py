@@ -1,9 +1,10 @@
 import streamlit as st
-import tempfile
+from services.smart_split_excel_service import run_smart_split_excel
+from utils.file_helper import save_uploaded_file
 
 from pathlib import Path
 
-from backend.smart_splitter import smart_split_pdf_with_excel
+
 
 
 st.set_page_config(
@@ -84,14 +85,8 @@ if st.button("🚀 Tách PDF & Đối Chiếu Excel", use_container_width=True):
         # Save PDF temp
         # =========================
 
-        with tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=".pdf"
-        ) as tmp_pdf:
+        pdf_path = save_uploaded_file(uploaded_pdf)
 
-            tmp_pdf.write(uploaded_pdf.getvalue())
-
-            pdf_path = tmp_pdf.name
 
         # =========================
         # Save Excel temp
@@ -99,14 +94,7 @@ if st.button("🚀 Tách PDF & Đối Chiếu Excel", use_container_width=True):
 
         excel_suffix = Path(uploaded_excel.name).suffix
 
-        with tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=excel_suffix
-        ) as tmp_excel:
-
-            tmp_excel.write(uploaded_excel.getvalue())
-
-            excel_path = tmp_excel.name
+        excel_path = save_uploaded_file(uploaded_excel)
 
         # =========================
         # Execute
@@ -114,7 +102,7 @@ if st.button("🚀 Tách PDF & Đối Chiếu Excel", use_container_width=True):
 
         with st.spinner("⏳ Đang tách PDF và đối chiếu Excel..."):
 
-            zip_path, msg = smart_split_pdf_with_excel(
+            zip_path, msg = run_smart_split_excel(
                 pdf_path=pdf_path,
                 excel_path=excel_path,
                 keyword=keyword,
