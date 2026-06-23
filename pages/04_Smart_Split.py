@@ -3,7 +3,7 @@ import tempfile
 
 from pathlib import Path
 
-from backend.smart_splitter import smart_split_pdf
+from services.smart_split_service import run_smart_split
 
 
 st.title("🧠 Tách PDF Thông Minh")
@@ -51,7 +51,7 @@ if st.button("🚀 Bắt đầu tách"):
 
     with st.spinner("Đang xử lý PDF..."):
 
-        zip_path, msg = smart_split_pdf(
+        zip_path, msg = run_smart_split(
             pdf_path=pdf_path,
             keyword=keyword,
             naming_type=naming_type
