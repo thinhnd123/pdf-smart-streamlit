@@ -6,15 +6,20 @@ from services.excel_merge_service import (
     run_excel_merge
 )
 
+from services.excel_cleaner_service import (
+    run_excel_cleaner
+)
+
 st.title(
     "📊 TIỆN ÍCH EXCEL"
 )
 
-tab1 = st.tabs(
+tab1,tab2 = st.tabs(
     [
-        "VLOOKUP Siêu Tốc"
+        "VLOOKUP Siêu Tốc",
+        "Data Cleaner"
     ]
-)[0]
+)
 
 # ==================================================
 # TAB 1
@@ -218,3 +223,163 @@ with tab1:
             else:
 
                 st.error(msg)
+                
+                
+# ==================================================
+# TAB 2
+# ==================================================
+
+with tab2:
+
+    st.subheader(
+        "🧹 Data Cleaner & Validator"
+    )
+
+    excel_file = st.file_uploader(
+        "Chọn Excel",
+        type=["xlsx", "xls"],
+        key="clean_excel"
+    )
+
+    if excel_file:
+
+        df_preview = pd.read_excel(
+            excel_file,
+            nrows=5
+        )
+
+        cols = list(
+            df_preview.columns
+        )
+
+        st.dataframe(
+            df_preview
+        )
+
+        phone_col = st.selectbox(
+            "Cột SĐT",
+            [""] + cols
+        )
+
+        email_col = st.selectbox(
+            "Cột Email",
+            [""] + cols
+        )
+
+        name_col = st.selectbox(
+            "Cột Họ tên",
+            [""] + cols
+        )
+
+        gcn_col = st.selectbox(
+            "Cột GCN",
+            [""] + cols
+        )
+
+        maql_col = st.selectbox(
+            "Cột Mã quản lý",
+            [""] + cols
+        )
+
+        serial_col = st.selectbox(
+            "Cột Serial",
+            [""] + cols
+        )
+
+        model_col = st.selectbox(
+            "Cột Model",
+            [""] + cols
+        )
+
+        if st.button(
+            "🚀 Làm sạch dữ liệu"
+        ):
+
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                suffix=".xlsx"
+            ) as tmp:
+
+                tmp.write(
+                    excel_file.getvalue()
+                )
+
+                path = tmp.name
+
+            (
+                output_file,
+                preview,
+                stats,
+                msg
+            ) = run_excel_cleaner(
+                path,
+                phone_col or None,
+                email_col or None,
+                name_col or None,
+                gcn_col or None,
+                maql_col or None,
+                serial_col or None,
+                model_col or None
+            )
+
+            if output_file:
+
+                st.success(msg)
+
+                c1, c2, c3, c4 = st.columns(4)
+
+                c1.metric(
+                    "SĐT sửa",
+                    stats["phones"]
+                )
+
+                c2.metric(
+                    "Tên sửa",
+                    stats["names"]
+                )
+
+                c3.metric(
+                    "Email lỗi",
+                    stats["email_errors"]
+                )
+
+                c4.metric(
+                    "Trùng SĐT",
+                    stats["duplicates"]
+                )
+
+                st.markdown("---")
+
+                st.write(
+                    "### Preview"
+                )
+
+                st.dataframe(
+                    preview,
+                    use_container_width=True
+                )
+
+                st.markdown("---")
+
+                st.info(
+                    f"GCN trùng: {stats['gcn_duplicates']} | "
+                    f"Mã QL trùng: {stats['maql_duplicates']} | "
+                    f"Serial trùng: {stats['serial_duplicates']} | "
+                    f"Model trùng: {stats['model_duplicates']}"
+                )
+
+                with open(
+                    output_file,
+                    "rb"
+                ) as f:
+
+                    st.download_button(
+                        "📥 Tải Excel sạch",
+                        data=f.read(),
+                        file_name="Excel_Cleaned.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+
+            else:
+
+                st.error(msg)                
