@@ -6,9 +6,10 @@ import os
 def run_excel_merge(
     file_a,
     file_b,
-    key_a,
-    key_b,
-    selected_columns
+    keys_a,
+    keys_b,
+    selected_columns,
+    join_type="left"
 ):
 
     try:
@@ -23,7 +24,10 @@ def run_excel_merge(
             dtype=str
         )
 
-        keep_cols = [key_b]
+        df_a = df_a.fillna("")
+        df_b = df_b.fillna("")
+
+        keep_cols = list(keys_b)
 
         for col in selected_columns:
 
@@ -34,17 +38,21 @@ def run_excel_merge(
         df_result = pd.merge(
             df_a,
             df_b[keep_cols],
-            left_on=key_a,
-            right_on=key_b,
-            how="left"
+            left_on=keys_a,
+            right_on=keys_b,
+            how=join_type
         )
 
-        if key_b in df_result.columns:
+        for col in keys_b:
 
-            df_result.drop(
-                columns=[key_b],
-                inplace=True
-            )
+            if (
+                col in df_result.columns
+                and col not in keys_a
+            ):
+                df_result.drop(
+                    columns=[col],
+                    inplace=True
+                )
 
         output_file = os.path.join(
             tempfile.gettempdir(),
@@ -58,12 +66,14 @@ def run_excel_merge(
 
         return (
             output_file,
+            df_result,
             f"✅ Ghép thành công {len(df_result)} dòng"
         )
 
     except Exception as e:
 
         return (
+            None,
             None,
             str(e)
         )

@@ -1,11 +1,10 @@
 import streamlit as st
 import tempfile
+import pandas as pd
 
 from services.excel_merge_service import (
     run_excel_merge
 )
-
-import pandas as pd
 
 st.title(
     "📊 TIỆN ÍCH EXCEL"
@@ -17,9 +16,9 @@ tab1 = st.tabs(
     ]
 )[0]
 
-# =====================================
+# ==================================================
 # TAB 1
-# =====================================
+# ==================================================
 
 with tab1:
 
@@ -51,34 +50,55 @@ with tab1:
             nrows=5
         )
 
+        st.markdown("---")
+
         col1, col2 = st.columns(2)
 
         with col1:
 
-            key_a = st.selectbox(
+            keys_a = st.multiselect(
                 "Cột khóa File A",
-                df_a.columns
+                df_a.columns,
+                default=[df_a.columns[0]]
             )
 
         with col2:
 
-            key_b = st.selectbox(
+            keys_b = st.multiselect(
                 "Cột khóa File B",
-                df_b.columns
+                df_b.columns,
+                default=[df_b.columns[0]]
             )
+
+        join_type = st.selectbox(
+            "Kiểu ghép dữ liệu",
+            {
+                "Left Join (giữ toàn bộ File A)": "left",
+                "Inner Join (chỉ giữ dữ liệu khớp)": "inner",
+                "Full Join (giữ tất cả)": "outer"
+            }
+        )
 
         selected_columns = st.multiselect(
             "Các cột muốn lấy từ File B",
             [
                 c
                 for c in df_b.columns
-                if c != key_b
+                if c not in keys_b
             ]
         )
 
         if st.button(
             "🚀 Ghép dữ liệu"
         ):
+
+            if len(keys_a) != len(keys_b):
+
+                st.error(
+                    "Số cột khóa A và B phải bằng nhau"
+                )
+
+                st.stop()
 
             with tempfile.NamedTemporaryFile(
                 delete=False,
@@ -102,17 +122,31 @@ with tab1:
 
                 path_b = tmp_b.name
 
-            result_file, msg = run_excel_merge(
+            result_file, df_preview, msg = run_excel_merge(
                 path_a,
                 path_b,
-                key_a,
-                key_b,
-                selected_columns
+                keys_a,
+                keys_b,
+                selected_columns,
+                join_type=join_type
             )
 
             if result_file:
 
                 st.success(msg)
+
+                st.markdown(
+                    "### 👀 Preview kết quả"
+                )
+
+                st.dataframe(
+                    df_preview.head(100),
+                    use_container_width=True
+                )
+
+                st.info(
+                    f"Hiển thị 100 dòng đầu tiên / Tổng {len(df_preview)} dòng"
+                )
 
                 with open(
                     result_file,
