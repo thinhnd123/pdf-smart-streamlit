@@ -8,6 +8,10 @@ from services.pdf_merge_by_excel_service import run_merge_by_excel
 
 import pandas as pd
 
+from services.pdf_excel_compare_service import run_compare_pdf_excel
+
+
+
 st.title(
     "📂 TỰ ĐỘNG HÓA HỒ SƠ"
 )
@@ -315,4 +319,149 @@ with tab2:
 
         else:
 
-            st.error(msg)            
+            st.error(msg)    
+            
+with tab3:
+
+    st.subheader(
+        "📊 Đối chiếu PDF - Excel"
+    )
+
+    compare_type = st.selectbox(
+        "Đối chiếu theo",
+        [
+            "GCN",
+            "Số seri",
+            "Mã quản lý",
+            "Tên thiết bị",
+            "Model"
+        ]
+    )
+
+    uploaded_excel = st.file_uploader(
+        "Chọn Excel",
+        type=["xlsx"],
+        key="compare_excel"
+    )
+
+    uploaded_pdfs = st.file_uploader(
+        "Chọn PDF",
+        type=["pdf"],
+        accept_multiple_files=True,
+        key="compare_pdf"
+    )
+
+    if st.button(
+        "🚀 Đối chiếu",
+        key="compare_btn"
+    ):
+
+        if not uploaded_excel:
+
+            st.error(
+                "Chưa chọn Excel"
+            )
+
+            st.stop()
+
+        if not uploaded_pdfs:
+
+            st.error(
+                "Chưa chọn PDF"
+            )
+
+            st.stop()
+
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=".xlsx"
+        ) as tmp:
+
+            tmp.write(
+                uploaded_excel.getvalue()
+            )
+
+            excel_path = tmp.name
+
+        result, msg = run_compare_pdf_excel(
+            uploaded_pdfs,
+            excel_path,
+            compare_type
+        )
+
+        if not result:
+
+            st.error(msg)
+
+            st.stop()
+
+        # =====================
+        # KPI
+        # =====================
+
+        c1, c2, c3, c4 = st.columns(4)
+
+        c1.metric(
+            "Khớp",
+            len(result["matched"])
+        )
+
+        c2.metric(
+            "Thiếu PDF",
+            len(result["missing_pdf"])
+        )
+
+        c3.metric(
+            "Thiếu Excel",
+            len(result["missing_excel"])
+        )
+
+        c4.metric(
+            "Trùng PDF",
+            len(result["duplicates"])
+        )
+
+        # =====================
+        # Chi tiết
+        # =====================
+
+        with st.expander(
+            "Thiếu PDF"
+        ):
+
+            st.write(
+                result["missing_pdf"]
+            )
+
+        with st.expander(
+            "Thiếu Excel"
+        ):
+
+            st.write(
+                result["missing_excel"]
+            )
+
+        with st.expander(
+            "Trùng PDF"
+        ):
+
+            st.write(
+                result["duplicates"]
+            )
+
+        with open(
+            result["report"],
+            "rb"
+        ) as f:
+
+            st.download_button(
+
+                "📥 Tải báo cáo Excel",
+
+                data=f.read(),
+
+                file_name="BaoCao_DoiChieu.xlsx",
+
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+            )
