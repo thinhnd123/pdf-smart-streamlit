@@ -6,7 +6,7 @@ from PIL import Image
 import io
 from services.pdf_split_service import run_pdf_split_range
 from services.pdf_merge_service import run_pdf_merge
-
+from services.image_to_pdf_service import run_image_to_pdf
 
 st.title("🛠️ TIỆN ÍCH PDF")
 
@@ -257,7 +257,102 @@ with tab2:
                     msg
                 )
 with tab3:
-    st.info("Đang phát triển")
+
+    st.subheader(
+        "🖼️ Ảnh → PDF"
+    )
+
+    uploaded_images = st.file_uploader(
+        "Chọn ảnh",
+        type=[
+            "jpg",
+            "jpeg",
+            "png",
+            "bmp",
+            "webp"
+        ],
+        accept_multiple_files=True,
+        key="image_to_pdf"
+    )
+
+    if uploaded_images:
+
+        st.markdown(
+            "### Preview"
+        )
+
+        cols = st.columns(4)
+
+        for idx, img_file in enumerate(
+            uploaded_images
+        ):
+
+            with cols[idx % 4]:
+
+                st.image(
+                    img_file,
+                    caption=img_file.name
+                )
+
+    if st.button(
+        "🚀 Chuyển thành PDF",
+        key="convert_image_pdf"
+    ):
+
+        if not uploaded_images:
+
+            st.error(
+                "Vui lòng chọn ảnh"
+            )
+
+            st.stop()
+
+        temp_paths = []
+
+        for img in uploaded_images:
+
+            suffix = "." + img.name.split(".")[-1]
+
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                suffix=suffix
+            ) as tmp:
+
+                tmp.write(
+                    img.getvalue()
+                )
+
+                temp_paths.append(
+                    tmp.name
+                )
+
+        with st.spinner(
+            "Đang tạo PDF..."
+        ):
+
+            pdf_path, msg = run_image_to_pdf(
+                temp_paths
+            )
+
+        if pdf_path:
+
+            st.success(msg)
+
+            with open(
+                pdf_path,
+                "rb"
+            ) as f:
+
+                st.download_button(
+                    "📥 Tải PDF",
+                    data=f.read(),
+                    file_name="Images.pdf",
+                    mime="application/pdf"
+                )
+
+        else:
+
+            st.error(msg)
 
 with tab4:
     st.info("Đang phát triển")
