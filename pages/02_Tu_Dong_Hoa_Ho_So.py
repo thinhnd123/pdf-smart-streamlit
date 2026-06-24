@@ -10,6 +10,10 @@ import pandas as pd
 
 from services.pdf_excel_compare_service import run_compare_pdf_excel
 
+from services.pdf_group_duplicate_service import (
+    run_group_duplicate_files
+)
+
 
 
 st.title(
@@ -465,3 +469,109 @@ with tab3:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
             )
+            
+            
+with tab4:
+
+    st.subheader(
+        "📂 Gom hồ sơ trùng tên"
+    )
+
+    st.info(
+        """
+        Ví dụ:
+
+        MayDo.pdf
+        MayDo_1.pdf
+        MayDo_2.pdf
+
+        =>
+
+        MayDo/
+        """
+    )
+
+    uploaded_files = st.file_uploader(
+        "Chọn các PDF",
+        type=["pdf"],
+        accept_multiple_files=True,
+        key="group_duplicate"
+    )
+
+    if uploaded_files:
+
+        st.success(
+            f"Đã chọn {len(uploaded_files)} file"
+        )
+
+    if st.button(
+        "🚀 Gom hồ sơ",
+        key="group_btn"
+    ):
+
+        if not uploaded_files:
+
+            st.error(
+                "Vui lòng chọn PDF"
+            )
+
+            st.stop()
+
+        with st.spinner(
+            "Đang gom hồ sơ..."
+        ):
+
+            zip_path, stats, msg = (
+                run_group_duplicate_files(
+                    uploaded_files
+                )
+            )
+
+        if not zip_path:
+
+            st.error(msg)
+
+            st.stop()
+
+        st.success(
+            "Hoàn thành"
+        )
+
+        c1, c2, c3 = st.columns(3)
+
+        c1.metric(
+            "Thư mục tạo",
+            stats[
+                "total_groups"
+            ]
+        )
+
+        c2.metric(
+            "PDF xử lý",
+            stats[
+                "total_files"
+            ]
+        )
+
+        c3.metric(
+            "Nhóm lớn nhất",
+            stats[
+                "largest_count"
+            ]
+        )
+
+        st.info(
+            f"Nhóm lớn nhất: {stats['largest_group']}"
+        )
+
+        with open(
+            zip_path,
+            "rb"
+        ) as f:
+
+            st.download_button(
+                "📥 Tải ZIP",
+                data=f.read(),
+                file_name="HoSo_Gom.zip",
+                mime="application/zip"
+            )            
