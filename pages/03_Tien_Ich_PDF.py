@@ -277,22 +277,48 @@ with tab3:
 
     if uploaded_images:
 
-        st.markdown(
-            "### Preview"
+        st.success(
+            f"Đã chọn {len(uploaded_images)} ảnh"
         )
+
+        st.markdown("### Preview")
 
         cols = st.columns(4)
 
-        for idx, img_file in enumerate(
-            uploaded_images
-        ):
+        for i, img_file in enumerate(uploaded_images):
 
-            with cols[idx % 4]:
+            image = Image.open(img_file)
+
+            with cols[i % 4]:
 
                 st.image(
-                    img_file,
-                    caption=img_file.name
+                    image,
+                    caption=f"{i+1}"
                 )
+
+        st.markdown("---")
+
+        reverse_order = st.checkbox(
+            "Đảo ngược thứ tự ảnh"
+        )
+
+        paper_size = st.selectbox(
+            "Khổ giấy",
+            [
+                "Giữ nguyên",
+                "A4",
+                "A5"
+            ]
+        )
+
+        orientation = st.selectbox(
+            "Chiều giấy",
+            [
+                "Tự động",
+                "Dọc",
+                "Ngang"
+            ]
+        )
 
     if st.button(
         "🚀 Chuyển thành PDF",
@@ -331,7 +357,9 @@ with tab3:
         ):
 
             pdf_path, msg = run_image_to_pdf(
-                temp_paths
+                image_paths=temp_paths,
+                paper_size=paper_size,
+                orientation=orientation
             )
 
         if pdf_path:
