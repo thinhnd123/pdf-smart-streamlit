@@ -16,6 +16,10 @@ from services.pdf_compress_service import (
     run_pdf_compress
 )
 
+from services.pdf_reduce_v2_service import (
+    run_pdf_reduce_v2
+)
+
 st.title("🛠️ TIỆN ÍCH PDF")
 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
@@ -468,9 +472,27 @@ with tab5:
         key="reduce_pdf"
     )
 
+    dpi = st.selectbox(
+        "Mức giảm",
+        [
+            150,
+            120,
+            100
+        ]
+    )
+
+    quality = st.selectbox(
+        "Chất lượng ảnh",
+        [
+            80,
+            70,
+            60
+        ]
+    )
+
     if st.button(
         "🚀 Giảm dung lượng",
-        key="reduce_btn"
+        key="reduce_btn_v2"
     ):
 
         if not uploaded_pdf:
@@ -492,25 +514,35 @@ with tab5:
 
             pdf_path = tmp.name
 
-        output_pdf, msg = run_pdf_compress(
-            pdf_path,
-            mode="strong"
-        )
+        with st.spinner(
+            "Đang giảm dung lượng..."
+        ):
 
-        st.success(msg)
-
-        with open(
-            output_pdf,
-            "rb"
-        ) as f:
-
-            st.download_button(
-                "📥 Tải PDF",
-                f.read(),
-                "Reduced.pdf",
-                "application/pdf"
+            output_pdf, msg = run_pdf_reduce_v2(
+                pdf_path,
+                dpi=dpi,
+                jpeg_quality=quality
             )
 
+        if output_pdf:
+
+            st.success(msg)
+
+            with open(
+                output_pdf,
+                "rb"
+            ) as f:
+
+                st.download_button(
+                    "📥 Tải PDF",
+                    f.read(),
+                    "Reduced_V2.pdf",
+                    "application/pdf"
+                )
+
+        else:
+
+            st.error(msg)
 with tab6:
     st.info("Đang phát triển")
 
