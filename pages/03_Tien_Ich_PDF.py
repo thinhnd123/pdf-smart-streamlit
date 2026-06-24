@@ -20,6 +20,10 @@ from services.pdf_reduce_v2_service import (
     run_pdf_reduce_v2
 )
 
+from services.pdf_version_service import (
+    run_pdf_version_downgrade
+)
+
 st.title("🛠️ TIỆN ÍCH PDF")
 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
@@ -544,7 +548,86 @@ with tab5:
 
             st.error(msg)
 with tab6:
-    st.info("Đang phát triển")
+
+    st.subheader(
+        "📄 Hạ phiên bản PDF"
+    )
+
+    uploaded_pdf = st.file_uploader(
+        "Chọn PDF",
+        type=["pdf"],
+        key="pdf_version"
+    )
+
+    compatibility = st.selectbox(
+        "Phiên bản PDF đích",
+        [
+            "1.3",
+            "1.4",
+            "1.5",
+            "1.6",
+            "1.7"
+        ]
+    )
+
+    st.info(
+        "PDF 1.4 tương thích rất tốt với các phần mềm cũ."
+    )
+
+    if st.button(
+        "🚀 Hạ phiên bản PDF",
+        key="version_btn"
+    ):
+
+        if not uploaded_pdf:
+
+            st.error(
+                "Vui lòng chọn PDF"
+            )
+
+            st.stop()
+
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=".pdf"
+        ) as tmp:
+
+            tmp.write(
+                uploaded_pdf.getvalue()
+            )
+
+            pdf_path = tmp.name
+
+        with st.spinner(
+            "Đang chuyển đổi..."
+        ):
+
+            output_pdf, msg = (
+                run_pdf_version_downgrade(
+                    pdf_path,
+                    compatibility
+                )
+            )
+
+        if output_pdf:
+
+            st.success(msg)
+
+            with open(
+                output_pdf,
+                "rb"
+            ) as f:
+
+                st.download_button(
+                    "📥 Tải PDF",
+                    data=f.read(),
+                    file_name=f"PDF_v{compatibility}.pdf",
+                    mime="application/pdf"
+                )
+
+        else:
+
+            st.error(msg)
 
 with tab7:
     st.info("Đang phát triển")
