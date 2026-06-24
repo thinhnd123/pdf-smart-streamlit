@@ -95,7 +95,7 @@ with tab1:
             if len(keys_a) != len(keys_b):
 
                 st.error(
-                    "Số cột khóa A và B phải bằng nhau"
+                    "Số lượng khóa phải giống nhau"
                 )
 
                 st.stop()
@@ -122,21 +122,55 @@ with tab1:
 
                 path_b = tmp_b.name
 
-            result_file, df_preview, msg = run_excel_merge(
+            (
+                result_file,
+                df_preview,
+                df_not_match,
+                summary,
+                msg
+            ) = run_excel_merge(
                 path_a,
                 path_b,
                 keys_a,
                 keys_b,
                 selected_columns,
-                join_type=join_type
+                join_type
             )
 
             if result_file:
 
                 st.success(msg)
 
-                st.markdown(
-                    "### 👀 Preview kết quả"
+                # =====================
+                # KPI
+                # =====================
+
+                c1, c2, c3, c4 = st.columns(4)
+
+                c1.metric(
+                    "Tổng dòng",
+                    summary["total"]
+                )
+
+                c2.metric(
+                    "Khớp",
+                    summary["match"]
+                )
+
+                c3.metric(
+                    "Không khớp",
+                    summary["not_match"]
+                )
+
+                c4.metric(
+                    "Tỷ lệ",
+                    f"{summary['percent']}%"
+                )
+
+                st.markdown("---")
+
+                st.subheader(
+                    "👀 Preview kết quả"
                 )
 
                 st.dataframe(
@@ -145,8 +179,29 @@ with tab1:
                 )
 
                 st.info(
-                    f"Hiển thị 100 dòng đầu tiên / Tổng {len(df_preview)} dòng"
+                    f"Hiển thị 100 dòng đầu tiên / {summary['total']} dòng"
                 )
+
+                # =====================
+                # NOT MATCH
+                # =====================
+
+                if len(df_not_match):
+
+                    st.warning(
+                        f"Có {len(df_not_match)} dòng không khớp"
+                    )
+
+                    st.dataframe(
+                        df_not_match.head(100),
+                        use_container_width=True
+                    )
+
+                else:
+
+                    st.success(
+                        "100% dữ liệu khớp"
+                    )
 
                 with open(
                     result_file,
