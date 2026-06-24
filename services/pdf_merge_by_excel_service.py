@@ -10,7 +10,9 @@ from pypdf import PdfWriter
 def run_merge_by_excel(
     files_a,
     files_b,
-    excel_path
+    excel_path,
+    column_a,
+    column_b
 ):
 
     try:
@@ -65,11 +67,11 @@ def run_merge_by_excel(
         for _, row in df.iterrows():
 
             file_a = str(
-                row.iloc[0]
+                row[column_a]
             ).strip()
 
             file_b = str(
-                row.iloc[1]
+                row[column_b]
             ).strip()
 
             if (

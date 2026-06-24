@@ -150,155 +150,169 @@ with tab2:
         "📊 Ghép hồ sơ theo Excel"
     )
 
-    excel_file = st.file_uploader(
-        "File Excel Mapping",
-        type=["xlsx"],
-        key="excel_mapping"
-    )
-
     uploaded_a = st.file_uploader(
         "Folder PDF A",
         type=["pdf"],
         accept_multiple_files=True,
-        key="excel_pdf_a"
+        key="excel_a"
     )
 
     uploaded_b = st.file_uploader(
         "Folder PDF B",
         type=["pdf"],
         accept_multiple_files=True,
-        key="excel_pdf_b"
+        key="excel_b"
     )
+
+    excel_file = st.file_uploader(
+        "File Excel Mapping",
+        type=["xlsx", "xls"],
+        key="excel_map"
+    )
+
+    column_a = None
+    column_b = None
 
     if excel_file:
 
         df_preview = pd.read_excel(
             excel_file,
-            header=None
-        )
+            dtype=str
+        ).fillna("")
 
-        st.markdown(
-            "### Preview Excel"
+        st.success(
+            f"Excel có {len(df_preview)} dòng"
         )
 
         st.dataframe(
-            df_preview.head(10)
+            df_preview.head(10),
+            use_container_width=True
+        )
+
+        columns = list(
+            df_preview.columns
         )
 
         col1, col2 = st.columns(2)
 
         with col1:
 
-            col_a = st.number_input(
-                "Cột tên PDF A",
-                min_value=0,
-                value=0
+            column_a = st.selectbox(
+                "Cột chứa File A",
+                columns
             )
 
         with col2:
 
-            col_b = st.number_input(
-                "Cột tên PDF B",
-                min_value=0,
-                value=1
+            column_b = st.selectbox(
+                "Cột chứa File B",
+                columns
             )
 
-        if st.button(
-            "🚀 Ghép theo Excel",
-            key="merge_excel_btn"
-        ):
+    if st.button(
+        "🚀 Ghép theo Excel",
+        key="merge_excel"
+    ):
 
-            if not uploaded_a:
+        if not uploaded_a:
 
-                st.error(
-                    "Chưa chọn PDF A"
-                )
+            st.error(
+                "Chưa chọn Folder A"
+            )
+            st.stop()
 
-                st.stop()
+        if not uploaded_b:
 
-            if not uploaded_b:
+            st.error(
+                "Chưa chọn Folder B"
+            )
+            st.stop()
 
-                st.error(
-                    "Chưa chọn PDF B"
-                )
+        if not excel_file:
 
-                st.stop()
+            st.error(
+                "Chưa chọn Excel"
+            )
+            st.stop()
 
-            temp_excel = tempfile.NamedTemporaryFile(
+        temp_a = []
+        temp_b = []
+
+        for file in uploaded_a:
+
+            with tempfile.NamedTemporaryFile(
                 delete=False,
-                suffix=".xlsx"
-            )
+                suffix=".pdf"
+            ) as tmp:
 
-            temp_excel.write(
+                tmp.write(
+                    file.getvalue()
+                )
+
+                temp_a.append(
+                    {
+                        "name": file.name,
+                        "path": tmp.name
+                    }
+                )
+
+        for file in uploaded_b:
+
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                suffix=".pdf"
+            ) as tmp:
+
+                tmp.write(
+                    file.getvalue()
+                )
+
+                temp_b.append(
+                    {
+                        "name": file.name,
+                        "path": tmp.name
+                    }
+                )
+
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=".xlsx"
+        ) as tmp_excel:
+
+            tmp_excel.write(
                 excel_file.getvalue()
             )
 
-            temp_excel.close()
+            excel_path = tmp_excel.name
 
-            temp_a = []
+        with st.spinner(
+            "Đang ghép..."
+        ):
 
-            for file in uploaded_a:
+            zip_path, msg = run_merge_by_excel(
+                temp_a,
+                temp_b,
+                excel_path,
+                column_a,
+                column_b
+            )
 
-                with tempfile.NamedTemporaryFile(
-                    delete=False,
-                    suffix=".pdf"
-                ) as tmp:
+        if zip_path:
 
-                    tmp.write(
-                        file.getvalue()
-                    )
+            st.success(msg)
 
-                    temp_a.append({
-                        "name": file.name,
-                        "path": tmp.name
-                    })
+            with open(
+                zip_path,
+                "rb"
+            ) as f:
 
-            temp_b = []
-
-            for file in uploaded_b:
-
-                with tempfile.NamedTemporaryFile(
-                    delete=False,
-                    suffix=".pdf"
-                ) as tmp:
-
-                    tmp.write(
-                        file.getvalue()
-                    )
-
-                    temp_b.append({
-                        "name": file.name,
-                        "path": tmp.name
-                    })
-
-            with st.spinner(
-                "Đang ghép..."
-            ):
-
-                zip_path, msg = run_merge_by_excel(
-                    temp_excel.name,
-                    temp_a,
-                    temp_b,
-                    col_a,
-                    col_b
+                st.download_button(
+                    "📥 Tải ZIP",
+                    data=f.read(),
+                    file_name="Merge_By_Excel.zip",
+                    mime="application/zip"
                 )
 
-            if zip_path:
+        else:
 
-                st.success(msg)
-
-                with open(
-                    zip_path,
-                    "rb"
-                ) as f:
-
-                    st.download_button(
-                        "📥 Tải ZIP",
-                        data=f.read(),
-                        file_name="Merged_By_Excel.zip",
-                        mime="application/zip"
-                    )
-
-            else:
-
-                st.error(msg)            
+            st.error(msg)            
