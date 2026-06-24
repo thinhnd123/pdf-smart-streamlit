@@ -12,6 +12,10 @@ from services.image_to_pdf_ocr_service import (
     run_image_to_pdf_ocr
 )
 
+from services.pdf_compress_service import (
+    run_pdf_compress
+)
+
 st.title("🛠️ TIỆN ÍCH PDF")
 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
@@ -398,10 +402,114 @@ with tab3:
             st.error(msg)
 
 with tab4:
-    st.info("Đang phát triển")
+
+    st.subheader(
+        "📦 Nén PDF"
+    )
+
+    uploaded_pdf = st.file_uploader(
+        "Chọn PDF",
+        type=["pdf"],
+        key="compress_pdf"
+    )
+
+    if st.button(
+        "🚀 Nén PDF",
+        key="compress_btn"
+    ):
+
+        if not uploaded_pdf:
+
+            st.error(
+                "Vui lòng chọn PDF"
+            )
+
+            st.stop()
+
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=".pdf"
+        ) as tmp:
+
+            tmp.write(
+                uploaded_pdf.getvalue()
+            )
+
+            pdf_path = tmp.name
+
+        output_pdf, msg = run_pdf_compress(
+            pdf_path,
+            mode="normal"
+        )
+
+        st.success(msg)
+
+        with open(
+            output_pdf,
+            "rb"
+        ) as f:
+
+            st.download_button(
+                "📥 Tải PDF",
+                f.read(),
+                "Compressed.pdf",
+                "application/pdf"
+            )
 
 with tab5:
-    st.info("Đang phát triển")
+
+    st.subheader(
+        "🪶 Giảm dung lượng PDF"
+    )
+
+    uploaded_pdf = st.file_uploader(
+        "Chọn PDF",
+        type=["pdf"],
+        key="reduce_pdf"
+    )
+
+    if st.button(
+        "🚀 Giảm dung lượng",
+        key="reduce_btn"
+    ):
+
+        if not uploaded_pdf:
+
+            st.error(
+                "Vui lòng chọn PDF"
+            )
+
+            st.stop()
+
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=".pdf"
+        ) as tmp:
+
+            tmp.write(
+                uploaded_pdf.getvalue()
+            )
+
+            pdf_path = tmp.name
+
+        output_pdf, msg = run_pdf_compress(
+            pdf_path,
+            mode="strong"
+        )
+
+        st.success(msg)
+
+        with open(
+            output_pdf,
+            "rb"
+        ) as f:
+
+            st.download_button(
+                "📥 Tải PDF",
+                f.read(),
+                "Reduced.pdf",
+                "application/pdf"
+            )
 
 with tab6:
     st.info("Đang phát triển")
