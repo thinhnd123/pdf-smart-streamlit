@@ -10,14 +10,18 @@ from services.excel_cleaner_service import (
     run_excel_cleaner
 )
 
+from services.excel_compare_service import (
+    run_excel_compare
+)
 st.title(
     "📊 TIỆN ÍCH EXCEL"
 )
 
-tab1,tab2 = st.tabs(
+tab1, tab2, tab3 = st.tabs(
     [
         "VLOOKUP Siêu Tốc",
-        "Data Cleaner"
+        "Data Cleaner",
+        "So Sánh Excel"
     ]
 )
 
@@ -382,4 +386,208 @@ with tab2:
 
             else:
 
-                st.error(msg)                
+                st.error(msg)
+                
+                
+# ==================================================
+# TAB 3
+# ==================================================
+
+with tab3:
+
+    st.subheader(
+        "🔍 So sánh 2 file Excel"
+    )
+
+    file_a = st.file_uploader(
+        "File A",
+        type=["xlsx", "xls"],
+        key="compare_a"
+    )
+
+    file_b = st.file_uploader(
+        "File B",
+        type=["xlsx", "xls"],
+        key="compare_b"
+    )
+
+    if file_a and file_b:
+
+        preview_a = pd.read_excel(
+            file_a,
+            nrows=5
+        )
+
+        preview_b = pd.read_excel(
+            file_b,
+            nrows=5
+        )
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            keys_a = st.multiselect(
+                "Cột khóa File A",
+                preview_a.columns,
+                default=[preview_a.columns[0]]
+            )
+
+        with col2:
+
+            keys_b = st.multiselect(
+                "Cột khóa File B",
+                preview_b.columns,
+                default=[preview_b.columns[0]]
+            )
+
+        if st.button(
+            "🚀 So sánh dữ liệu"
+        ):
+
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                suffix=".xlsx"
+            ) as tmp1:
+
+                tmp1.write(
+                    file_a.getvalue()
+                )
+
+                path_a = tmp1.name
+
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                suffix=".xlsx"
+            ) as tmp2:
+
+                tmp2.write(
+                    file_b.getvalue()
+                )
+
+                path_b = tmp2.name
+
+            (
+                output_file,
+                df_match,
+                df_only_a,
+                df_only_b,
+                df_detail,
+                summary,
+                msg
+            ) = run_excel_compare(
+                path_a,
+                path_b,
+                keys_a,
+                keys_b
+            )
+
+            if output_file:
+
+                st.success(msg)
+
+                c1, c2, c3, c4, c5 = st.columns(5)
+
+                c1.metric(
+                    "Khớp",
+                    summary["match"]
+                )
+
+                c2.metric(
+                    "Chỉ File A",
+                    summary["only_a"]
+                )
+
+                c3.metric(
+                    "Chỉ File B",
+                    summary["only_b"]
+                )
+
+                c4.metric(
+                    "Ô dữ liệu thay đổi",
+                    summary["differences"]
+                )
+
+                c5.metric(
+                    "Hồ sơ thay đổi",
+                    summary["changed_keys"]
+                )
+
+                st.markdown("---")
+
+                st.subheader(
+                    "✅ Dữ liệu khớp"
+                )
+
+                st.dataframe(
+                    df_match.head(100)
+                )
+
+                st.subheader(
+                    "⚠️ Chỉ có trong File A"
+                )
+
+                st.dataframe(
+                    df_only_a.head(100)
+                )
+
+                st.subheader(
+                    "⚠️ Chỉ có trong File B"
+                )
+
+                st.dataframe(
+                    df_only_b.head(100)
+                )
+
+                with open(
+                    output_file,
+                    "rb"
+                ) as f:
+                    
+                    st.subheader(
+                        "🔍 Sai khác chi tiết"
+                    )
+
+                    if len(df_detail):
+
+                        st.info(
+                            f"Phát hiện {summary['changed_keys']} Key bị thay đổi dữ liệu"
+                        )
+
+                        audit_df = (
+
+                            df_detail
+
+                            .groupby("Column")
+
+                            .size()
+
+                            .reset_index(
+                                name="Số lần thay đổi"
+                            )
+
+                            .sort_values(
+                                "Số lần thay đổi",
+                                ascending=False
+                            )
+                        )
+
+                        st.subheader(
+                            "📊 Audit Report"
+                        )
+
+                        st.dataframe(
+                            audit_df,
+                            use_container_width=True
+                        )
+
+                    st.download_button(
+                        "📥 Tải Excel kết quả",
+                        data=f.read(),
+                        file_name="Excel_Compare.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+
+            else:
+
+                st.error(msg)                                
