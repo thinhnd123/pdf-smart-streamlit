@@ -8,6 +8,10 @@ from services.pdf_split_service import run_pdf_split_range
 from services.pdf_merge_service import run_pdf_merge
 from services.image_to_pdf_service import run_image_to_pdf
 
+from services.image_to_pdf_ocr_service import (
+    run_image_to_pdf_ocr
+)
+
 st.title("🛠️ TIỆN ÍCH PDF")
 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
@@ -302,6 +306,9 @@ with tab3:
             "Đảo ngược thứ tự ảnh"
         )
 
+        ocr_mode = st.checkbox(
+            "🔍 OCR PDF (tìm kiếm được)"
+        )
         paper_size = st.selectbox(
             "Khổ giấy",
             [
@@ -356,11 +363,19 @@ with tab3:
             "Đang tạo PDF..."
         ):
 
-            pdf_path, msg = run_image_to_pdf(
-                image_paths=temp_paths,
-                paper_size=paper_size,
-                orientation=orientation
-            )
+            if ocr_mode:
+
+                pdf_path, msg = run_image_to_pdf_ocr(
+                    temp_paths
+                )
+
+            else:
+
+                pdf_path, msg = run_image_to_pdf(
+                    image_paths=temp_paths,
+                    paper_size=paper_size,
+                    orientation=orientation
+                )
 
         if pdf_path:
 
