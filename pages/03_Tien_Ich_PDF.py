@@ -24,6 +24,14 @@ from services.pdf_version_service import (
     run_pdf_version_downgrade
 )
 
+from services.remove_blank_page_service import (
+    run_remove_blank_last_page
+)
+
+from services.remove_blank_pages_v2_service import (
+    run_remove_blank_pages_batch
+)
+
 st.title("🛠️ TIỆN ÍCH PDF")
 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
@@ -630,4 +638,91 @@ with tab6:
             st.error(msg)
 
 with tab7:
-    st.info("Đang phát triển")
+
+    st.subheader(
+        "🧹 Xoá trang trắng (Hàng loạt)"
+    )
+
+    uploaded_pdfs = st.file_uploader(
+        "Chọn PDF",
+        type=["pdf"],
+        accept_multiple_files=True,
+        key="remove_blank_batch"
+    )
+
+    threshold = st.slider(
+        "Độ nhạy",
+        0.90,
+        1.00,
+        0.98,
+        0.01
+    )
+
+    if uploaded_pdfs:
+
+        st.info(
+            f"Đã chọn {len(uploaded_pdfs)} file"
+        )
+
+    if st.button(
+        "🚀 Xử lý hàng loạt",
+        key="remove_blank_batch_btn"
+    ):
+
+        if not uploaded_pdfs:
+
+            st.error(
+                "Vui lòng chọn file"
+            )
+
+            st.stop()
+
+        temp_paths = []
+
+        for file in uploaded_pdfs:
+
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                suffix=".pdf"
+            ) as tmp:
+
+                tmp.write(
+                    file.getvalue()
+                )
+
+                temp_paths.append(
+                    tmp.name
+                )
+
+        with st.spinner(
+            "Đang xử lý..."
+        ):
+
+            zip_path, report = (
+                run_remove_blank_pages_batch(
+                    temp_paths,
+                    threshold
+                )
+            )
+
+        st.success(
+            "Hoàn thành"
+        )
+
+        st.text_area(
+            "Kết quả",
+            report,
+            height=250
+        )
+
+        with open(
+            zip_path,
+            "rb"
+        ) as f:
+
+            st.download_button(
+                "📥 Tải ZIP",
+                data=f.read(),
+                file_name="BlankRemoved.zip",
+                mime="application/zip"
+            )
