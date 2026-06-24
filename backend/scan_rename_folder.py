@@ -520,7 +520,7 @@ def rename_scan_folder(
 
         elif naming_type == "so_gcn":
 
-            final_filename = f"GCN_{gcn}"
+            final_filename = clean_filename(gcn)
 
         # ------------------------------------------------------
         # Default
@@ -528,7 +528,7 @@ def rename_scan_folder(
 
         else:
 
-            final_filename = f"GCN_{gcn}"
+            final_filename = clean_filename(gcn)
 
         # ======================================================
         # CHỐNG TRÙNG
