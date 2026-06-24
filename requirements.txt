@@ -1,8 +1,8 @@
-streamlit==1.58.0
-PyMuPDF==1.26.3
-pandas==2.3.0
-openpyxl==3.1.5
-numpy==2.3.1
-opencv-python==4.12.0.88
-Pillow==11.3.0
-pytesseract==0.3.13
+streamlit
+PyMuPDF
+pandas
+openpyxl
+numpy
+opencv-python
+Pillow
+pytesseract
