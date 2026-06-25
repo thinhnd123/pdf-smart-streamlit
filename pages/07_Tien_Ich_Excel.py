@@ -36,11 +36,8 @@ tab1, tab2, tab3, tab4 = st.tabs(
     ]
 )
 
-# ==================================================
-# TAB 1
-# ==================================================
-
 with tab1:
+
 
     st.subheader(
         "⚡ VLOOKUP / Merge Siêu Tốc"
@@ -90,14 +87,22 @@ with tab1:
                 default=[df_b.columns[0]]
             )
 
-        join_type = st.selectbox(
+        join_label = st.selectbox(
             "Kiểu ghép dữ liệu",
-            {
-                "Left Join (giữ toàn bộ File A)": "left",
-                "Inner Join (chỉ giữ dữ liệu khớp)": "inner",
-                "Full Join (giữ tất cả)": "outer"
-            }
+            [
+                "Left Join (giữ toàn bộ File A)",
+                "Inner Join (chỉ giữ dữ liệu khớp)",
+                "Full Join (giữ tất cả)"
+            ]
         )
+
+        join_map = {
+            "Left Join (giữ toàn bộ File A)": "left",
+            "Inner Join (chỉ giữ dữ liệu khớp)": "inner",
+            "Full Join (giữ tất cả)": "outer"
+        }
+
+        join_type = join_map[join_label]
 
         selected_columns = st.multiselect(
             "Các cột muốn lấy từ File B",
@@ -106,6 +111,11 @@ with tab1:
                 for c in df_b.columns
                 if c not in keys_b
             ]
+        )
+
+        force_merge = st.checkbox(
+            "⚠️ Vẫn merge nếu phát hiện dữ liệu bất thường",
+            value=False
         )
 
         if st.button(
@@ -147,6 +157,8 @@ with tab1:
                 df_preview,
                 df_not_match,
                 summary,
+                business_summary,
+                business_detail,
                 msg
             ) = run_excel_merge(
                 path_a,
@@ -154,18 +166,15 @@ with tab1:
                 keys_a,
                 keys_b,
                 selected_columns,
-                join_type
+                join_type,
+                force_merge
             )
 
             if result_file:
 
                 st.success(msg)
 
-                # =====================
-                # KPI
-                # =====================
-
-                c1, c2, c3, c4 = st.columns(4)
+                c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
 
                 c1.metric(
                     "Tổng dòng",
@@ -187,6 +196,21 @@ with tab1:
                     f"{summary['percent']}%"
                 )
 
+                c5.metric(
+                    "Duplicate A",
+                    summary["duplicate_a"]
+                )
+
+                c6.metric(
+                    "Duplicate B",
+                    summary["duplicate_b"]
+                )
+
+                c7.metric(
+                    "Business Error",
+                    summary["business_error"]
+                )
+
                 st.markdown("---")
 
                 st.subheader(
@@ -198,14 +222,6 @@ with tab1:
                     use_container_width=True
                 )
 
-                st.info(
-                    f"Hiển thị 100 dòng đầu tiên / {summary['total']} dòng"
-                )
-
-                # =====================
-                # NOT MATCH
-                # =====================
-
                 if len(df_not_match):
 
                     st.warning(
@@ -215,12 +231,6 @@ with tab1:
                     st.dataframe(
                         df_not_match.head(100),
                         use_container_width=True
-                    )
-
-                else:
-
-                    st.success(
-                        "100% dữ liệu khớp"
                     )
 
                 with open(
@@ -238,7 +248,29 @@ with tab1:
             else:
 
                 st.error(msg)
-                
+
+                if len(business_summary):
+
+                    st.markdown(
+                        "### 🚨 Business Error Summary"
+                    )
+
+                    st.dataframe(
+                        business_summary,
+                        use_container_width=True
+                    )
+
+                    st.markdown(
+                        "### 🔍 Business Error Detail"
+                    )
+
+                    st.dataframe(
+                        business_detail,
+                        use_container_width=True
+                    )
+
+
+                       
                 
 # ==================================================
 # TAB 2
