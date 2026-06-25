@@ -22,17 +22,21 @@ from services.excel_consistency_service import (
     run_consistency_check
 )
 
+from services.excel_audit_service import (
+    run_data_audit
+)
 
 st.title(
     "📊 TIỆN ÍCH EXCEL"
 )
 
-tab1, tab2, tab3, tab4 = st.tabs(
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
     [
         "VLOOKUP Siêu Tốc",
         "Data Cleaner",
         "So Sánh Excel",
-        "🔎 Smart Search Excel"
+        "🔎 Smart Search Excel",
+        "📊 Data Audit"
     ]
 )
 
@@ -836,4 +840,167 @@ with tab4:
             else:
 
                 st.success(msg)
+                
+                
+# ==================================================
+
+# TAB 5
+
+# ==================================================
+
+with tab5:
+
+
+    st.subheader(
+        "📊 Data Audit"
+    )
+
+    uploaded_file = st.file_uploader(
+        "Excel nguồn",
+        type=["xlsx", "xls"],
+        key="audit_excel"
+    )
+
+    if uploaded_file:
+
+        preview_df = pd.read_excel(
+            uploaded_file,
+            nrows=5,
+            dtype=str
+        )
+
+        columns = list(
+            preview_df.columns
+        )
+
+        st.dataframe(
+            preview_df,
+            use_container_width=True
+        )
+
+        key_col = st.selectbox(
+            "Key Column",
+            columns,
+            key="audit_key"
+        )
+
+        value_col = st.selectbox(
+            "Value Column",
+            columns,
+            key="audit_value"
+        )
+
+        if st.button(
+            "🚀 Audit dữ liệu",
+            key="audit_btn"
+        ):
+
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                suffix=".xlsx"
+            ) as tmp:
+
+                tmp.write(
+                    uploaded_file.getvalue()
+                )
+
+                excel_path = tmp.name
+
+            (
+                output_file,
+                duplicate_summary,
+                duplicate_detail,
+                issue_df,
+                detail_df,
+                relationship_df,
+                msg
+            ) = run_data_audit(
+                excel_path,
+                key_col,
+                value_col
+            )
+
+            if output_file:
+
+                st.success(msg)
+
+                c1, c2, c3 = st.columns(3)
+
+                c1.metric(
+                    "Tổng cột",
+                    len(columns)
+                )
+
+                c2.metric(
+                    "Model nhiều giá",
+                    len(issue_df)
+                )
+
+                c3.metric(
+                    "Dòng bất thường",
+                    len(detail_df)
+                )
+
+                st.markdown("---")
+
+                st.subheader(
+                    "📊 Duplicate Summary"
+                )
+
+                st.dataframe(
+                    duplicate_summary,
+                    use_container_width=True
+                )
+
+                st.subheader(
+                    "🔥 Top Duplicate Values"
+                )
+
+                st.dataframe(
+                    duplicate_detail,
+                    use_container_width=True
+                )
+
+                st.subheader(
+                    "💰 Model có nhiều giá"
+                )
+
+                st.dataframe(
+                    issue_df,
+                    use_container_width=True
+                )
+
+                st.subheader(
+                    "🔍 Chi tiết"
+                )
+
+                st.dataframe(
+                    detail_df,
+                    use_container_width=True
+                )
+                
+                st.subheader(
+                    "🔗 Relationship Audit"
+                )
+
+                st.dataframe(
+                    relationship_df,
+                    use_container_width=True
+                )
+
+                with open(
+                    output_file,
+                    "rb"
+                ) as f:
+
+                    st.download_button(
+                        "📥 Tải báo cáo Audit",
+                        data=f.read(),
+                        file_name="Data_Audit.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+
+            else:
+
+                st.error(msg)
 
