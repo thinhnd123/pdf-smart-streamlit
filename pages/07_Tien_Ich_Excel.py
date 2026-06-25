@@ -18,6 +18,11 @@ from services.excel_smart_search_service import (
     run_smart_search
 )
 
+from services.excel_consistency_service import (
+    run_consistency_check
+)
+
+
 st.title(
     "📊 TIỆN ÍCH EXCEL"
 )
@@ -600,6 +605,7 @@ with tab3:
 
 with tab4:
 
+
     st.subheader(
         "🔎 Smart Search Excel"
     )
@@ -612,23 +618,46 @@ with tab4:
 
     if uploaded_file:
 
-        preview_df = pd.read_excel(
+        # =====================
+        # Load file 1 lần
+        # =====================
+
+        full_df = pd.read_excel(
             uploaded_file,
-            nrows=5
-        )
+            dtype=str
+        ).fillna("")
 
         columns = list(
-            preview_df.columns
+            full_df.columns
         )
+
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=".xlsx"
+        ) as tmp:
+
+            tmp.write(
+                uploaded_file.getvalue()
+            )
+
+            excel_path = tmp.name
+
+        # ==================================================
+        # SEARCH
+        # ==================================================
+
+        st.markdown("### 🔎 Tìm kiếm dữ liệu")
 
         search_columns = st.multiselect(
             "Các cột tham gia tìm kiếm",
             columns,
-            default=columns
+            default=columns,
+            key="search_columns"
         )
 
         search_text = st.text_input(
-            "🔎 Từ khóa"
+            "Từ khóa",
+            key="search_text"
         )
 
         if st.button(
@@ -643,17 +672,6 @@ with tab4:
                 )
 
                 st.stop()
-
-            with tempfile.NamedTemporaryFile(
-                delete=False,
-                suffix=".xlsx"
-            ) as tmp:
-
-                tmp.write(
-                    uploaded_file.getvalue()
-                )
-
-                excel_path = tmp.name
 
             (
                 output_file,
@@ -694,3 +712,96 @@ with tab4:
             else:
 
                 st.error(msg)
+
+        # ==================================================
+        # CONSISTENCY CHECK
+        # ==================================================
+
+        st.markdown("---")
+
+        st.subheader(
+            "🧪 Consistency Check"
+        )
+
+        st.info(
+            "Ví dụ: 1 Model có nhiều Giá khác nhau, 1 GCN có nhiều Model..."
+        )
+
+        check_key = st.selectbox(
+            "Cột khóa",
+            columns,
+            key="check_key"
+        )
+
+        check_value = st.selectbox(
+            "Cột cần kiểm tra",
+            columns,
+            key="check_value"
+        )
+
+        if st.button(
+            "🚀 Kiểm tra dữ liệu",
+            key="consistency_btn"
+        ):
+
+            (
+                output_file,
+                issue_df,
+                detail_df,
+                msg
+            ) = run_consistency_check(
+                excel_path,
+                check_key,
+                check_value
+            )
+
+            if output_file:
+
+                st.warning(msg)
+
+                c1, c2 = st.columns(2)
+
+                c1.metric(
+                    "Key bất thường",
+                    len(issue_df)
+                )
+
+                c2.metric(
+                    "Dòng liên quan",
+                    len(detail_df)
+                )
+
+                st.markdown(
+                    "### 📊 Summary"
+                )
+
+                st.dataframe(
+                    issue_df,
+                    use_container_width=True
+                )
+
+                st.markdown(
+                    "### 🔍 Chi tiết"
+                )
+
+                st.dataframe(
+                    detail_df,
+                    use_container_width=True
+                )
+
+                with open(
+                    output_file,
+                    "rb"
+                ) as f:
+
+                    st.download_button(
+                        "📥 Tải báo cáo",
+                        data=f.read(),
+                        file_name="Consistency_Check.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+
+            else:
+
+                st.success(msg)
+
