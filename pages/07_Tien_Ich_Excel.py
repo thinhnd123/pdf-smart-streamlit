@@ -13,15 +13,21 @@ from services.excel_cleaner_service import (
 from services.excel_compare_service import (
     run_excel_compare
 )
+
+from services.excel_smart_search_service import (
+    run_smart_search
+)
+
 st.title(
     "📊 TIỆN ÍCH EXCEL"
 )
 
-tab1, tab2, tab3 = st.tabs(
+tab1, tab2, tab3, tab4 = st.tabs(
     [
         "VLOOKUP Siêu Tốc",
         "Data Cleaner",
-        "So Sánh Excel"
+        "So Sánh Excel",
+        "🔎 Smart Search Excel"
     ]
 )
 
@@ -590,4 +596,101 @@ with tab3:
 
             else:
 
-                st.error(msg)                                
+                st.error(msg) 
+
+with tab4:
+
+    st.subheader(
+        "🔎 Smart Search Excel"
+    )
+
+    uploaded_file = st.file_uploader(
+        "Excel nguồn",
+        type=["xlsx", "xls"],
+        key="search_excel"
+    )
+
+    if uploaded_file:
+
+        preview_df = pd.read_excel(
+            uploaded_file,
+            nrows=5
+        )
+
+        columns = list(
+            preview_df.columns
+        )
+
+        search_columns = st.multiselect(
+            "Các cột tham gia tìm kiếm",
+            columns,
+            default=columns
+        )
+
+        search_text = st.text_input(
+            "🔎 Từ khóa"
+        )
+
+        if st.button(
+            "🚀 Tìm kiếm",
+            key="search_btn"
+        ):
+
+            if not search_columns:
+
+                st.error(
+                    "Chọn ít nhất 1 cột"
+                )
+
+                st.stop()
+
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                suffix=".xlsx"
+            ) as tmp:
+
+                tmp.write(
+                    uploaded_file.getvalue()
+                )
+
+                excel_path = tmp.name
+
+            (
+                output_file,
+                result_df,
+                msg
+            ) = run_smart_search(
+                excel_path,
+                search_text,
+                search_columns
+            )
+
+            if output_file:
+
+                st.success(msg)
+
+                st.metric(
+                    "Kết quả",
+                    len(result_df)
+                )
+
+                st.dataframe(
+                    result_df,
+                    use_container_width=True
+                )
+
+                with open(
+                    output_file,
+                    "rb"
+                ) as f:
+
+                    st.download_button(
+                        "📥 Tải kết quả",
+                        data=f.read(),
+                        file_name="Search_Result.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+
+            else:
+
+                st.error(msg)
