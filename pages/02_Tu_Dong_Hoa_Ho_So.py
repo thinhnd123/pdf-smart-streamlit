@@ -109,7 +109,11 @@ with tab1:
         # Folder B
         # ==================
 
-        for file in uploaded_a:
+        # ==================
+        # Folder B
+        # ==================
+
+        for file in uploaded_b:
 
             with tempfile.NamedTemporaryFile(
                 delete=False,
@@ -118,7 +122,7 @@ with tab1:
 
                 tmp.write(file.getvalue())
 
-                temp_a.append({
+                temp_b.append({
                     "name": file.name,
                     "path": tmp.name
                 })
