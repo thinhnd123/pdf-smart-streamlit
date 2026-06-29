@@ -7,7 +7,8 @@ import io
 from services.pdf_split_service import run_pdf_split_range
 from services.pdf_merge_service import run_pdf_merge
 from services.image_to_pdf_service import run_image_to_pdf
-
+from backend.group_pdf_by_excel_column import group_pdf_by_excel_column
+import pandas as pd
 from services.image_to_pdf_ocr_service import (
     run_image_to_pdf_ocr
 )
@@ -34,14 +35,15 @@ from services.remove_blank_pages_v2_service import (
 
 st.title("🛠️ TIỆN ÍCH PDF")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "Ghép PDF",
     "Tách PDF",
     "Ảnh → PDF",
     "Nén PDF",
     "Giảm dung lượng",
     "Hạ phiên bản PDF",
-    "Xoá trang trắng"
+    "Xoá trang trắng",
+    "Xếp chung thư mục theo GCN"
 ])
 
 # ==================================================
@@ -753,3 +755,80 @@ with tab7:
                 file_name="BlankRemoved.zip",
                 mime="application/zip"
             )
+            
+            
+with tab8: # Hoặc tab8 tùy bạn đặt tên
+    st.subheader("📂 Phân loại & Gom nhóm PDF theo danh mục Excel")
+    st.write("Đối chiếu tên file PDF (Mã GCN) với Excel để tự động nhóm vào từng Folder riêng biệt.")
+
+    # 1. Upload files
+    uploaded_excel = st.file_uploader("1. Chọn file Excel danh mục đối chiếu", type=["xlsx", "xls"], key="group_excel")
+    uploaded_pdfs = st.file_uploader("2. Chọn các file PDF cần gom nhóm (Chọn nhiều file cùng lúc)", type=["pdf"], accept_multiple_files=True, key="group_pdfs")
+
+    if uploaded_excel and uploaded_pdfs:
+        # Lưu file excel tạm để đọc cột
+        if "tmp_excel_group_path" not in st.session_state:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+                tmp.write(uploaded_excel.getvalue())
+                st.session_state.tmp_excel_group_path = tmp.name
+        
+        excel_path = st.session_state.tmp_excel_group_path
+
+        # Đọc trước vài dòng Excel để lấy danh sách Cột hiển thị cho người dùng chọn
+        try:
+            df_preview = pd.read_excel(excel_path, header=None, nrows=5).fillna("")
+            column_options = {f"Cột {i} (Ví dụ: {df_preview.iloc[0, i] if len(df_preview) > 0 else ''})": i for i in range(df_preview.shape[1])}
+        except Exception as e:
+            st.error(f"Không thể đọc file Excel: {e}")
+            st.stop()
+
+        # =============================================================
+        # BỌC PHẦN LỰA CHỌN CỘT VÀ NÚT CHẠY VÀO TRONG ST.FORM
+        # =============================================================
+        with st.form(key="pdf_grouping_form"):
+            st.markdown("### 🛠 Cấu hình đối chiếu")
+            
+            col_match, col_target = st.columns(2)
+            with col_match:
+                match_col_label = st.selectbox(
+                    "Cột chứa mã Giấy chứng nhận (khớp với tên file PDF):", 
+                    options=list(column_options.keys()),
+                    index=25 if 25 < len(column_options) else 0 # Mặc định cột 25 như code cũ của bạn nếu có
+                )
+            with col_target:
+                target_col_label = st.selectbox(
+                    "Cột cần trả về (Dùng để đặt tên Folder gom nhóm):", 
+                    options=list(column_options.keys()),
+                    index=5 if 5 < len(column_options) else 0 # Ví dụ mặc định lấy cột Tên thiết bị
+                )
+
+            match_col_idx = column_options[match_col_label]
+            target_col_idx = column_options[target_col_label]
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            submit_grouping = st.form_submit_button("🚀 Tiến hành Gom nhóm & Nén ZIP")
+
+            if submit_grouping:
+                with st.spinner("Hệ thống đang đối chiếu dữ liệu và nhóm thư mục..."):
+                    import time # Đảm bảo đã import time trong file
+                    zip_path, msg = group_pdf_by_excel_column(
+                        uploaded_pdfs, 
+                        excel_path, 
+                        match_col_idx, 
+                        target_col_idx
+                    )
+
+                if zip_path:
+                    st.success(msg)
+                    with open(zip_path, "rb") as f:
+                        st.download_button(
+                            label="📥 Tải xuống File ZIP kết quả",
+                            data=f.read(),
+                            file_name="Ket_Qua_Gom_Nhom_PDF.zip",
+                            mime="application/zip"
+                        )
+                else:
+                    st.error(msg)
+        # =============================================================            
+            
+            
