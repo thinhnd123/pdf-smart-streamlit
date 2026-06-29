@@ -759,14 +759,13 @@ with tab7:
             
 with tab8: # Hoặc tab8 tùy bạn đặt tên
     st.subheader("📂 Phân loại & Gom nhóm PDF theo danh mục Excel")
-    st.write("Đối chiếu tên file PDF (Mã GCN) với Excel để tự động nhóm vào từng Folder riêng biệt.")
+    st.write("Đối chiếu tên file PDF (Mã GCN) with Excel để tự động nhóm vào từng Folder riêng biệt.")
 
     # 1. Upload files
     uploaded_excel = st.file_uploader("1. Chọn file Excel danh mục đối chiếu", type=["xlsx", "xls"], key="group_excel")
     uploaded_pdfs = st.file_uploader("2. Chọn các file PDF cần gom nhóm (Chọn nhiều file cùng lúc)", type=["pdf"], accept_multiple_files=True, key="group_pdfs")
 
     if uploaded_excel and uploaded_pdfs:
-        # Lưu file excel tạm để đọc cột
         if "tmp_excel_group_path" not in st.session_state:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
                 tmp.write(uploaded_excel.getvalue())
@@ -774,13 +773,18 @@ with tab8: # Hoặc tab8 tùy bạn đặt tên
         
         excel_path = st.session_state.tmp_excel_group_path
 
-        # Đọc trước vài dòng Excel để lấy danh sách Cột hiển thị cho người dùng chọn
         try:
             df_preview = pd.read_excel(excel_path, header=None, nrows=5).fillna("")
             column_options = {f"Cột {i} (Ví dụ: {df_preview.iloc[0, i] if len(df_preview) > 0 else ''})": i for i in range(df_preview.shape[1])}
         except Exception as e:
             st.error(f"Không thể đọc file Excel: {e}")
             st.stop()
+
+        # Tạo sẵn các biến lưu trạng thái trong session_state nếu chưa có
+        if "group_zip_path" not in st.session_state:
+            st.session_state.group_zip_path = None
+        if "group_msg" not in st.session_state:
+            st.session_state.group_msg = ""
 
         # =============================================================
         # BỌC PHẦN LỰA CHỌN CỘT VÀ NÚT CHẠY VÀO TRONG ST.FORM
@@ -793,13 +797,13 @@ with tab8: # Hoặc tab8 tùy bạn đặt tên
                 match_col_label = st.selectbox(
                     "Cột chứa mã Giấy chứng nhận (khớp với tên file PDF):", 
                     options=list(column_options.keys()),
-                    index=25 if 25 < len(column_options) else 0 # Mặc định cột 25 như code cũ của bạn nếu có
+                    index=25 if 25 < len(column_options) else 0
                 )
             with col_target:
                 target_col_label = st.selectbox(
                     "Cột cần trả về (Dùng để đặt tên Folder gom nhóm):", 
                     options=list(column_options.keys()),
-                    index=5 if 5 < len(column_options) else 0 # Ví dụ mặc định lấy cột Tên thiết bị
+                    index=5 if 5 < len(column_options) else 0
                 )
 
             match_col_idx = column_options[match_col_label]
@@ -810,25 +814,27 @@ with tab8: # Hoặc tab8 tùy bạn đặt tên
 
             if submit_grouping:
                 with st.spinner("Hệ thống đang đối chiếu dữ liệu và nhóm thư mục..."):
-                    import time # Đảm bảo đã import time trong file
+                    # CHẠY LOGIC VÀ LƯU KẾT QUẢ VÀO SESSION STATE
                     zip_path, msg = group_pdf_by_excel_column(
                         uploaded_pdfs, 
                         excel_path, 
                         match_col_idx, 
                         target_col_idx
                     )
+                    st.session_state.group_zip_path = zip_path
+                    st.session_state.group_msg = msg
 
-                if zip_path:
-                    st.success(msg)
-                    with open(zip_path, "rb") as f:
-                        st.download_button(
-                            label="📥 Tải xuống File ZIP kết quả",
-                            data=f.read(),
-                            file_name="Ket_Qua_Gom_Nhom_PDF.zip",
-                            mime="application/zip"
-                        )
-                else:
-                    st.error(msg)
-        # =============================================================            
-            
-            
+        # =============================================================
+        # KẾT THÚC VÙNG FORM -> ĐẶT NÚT DOWNLOAD Ở ĐÂY (BÊN NGOÀI FORM)
+        # =============================================================
+        
+        # Kiểm tra xem nếu session_state đã có file zip thì hiển thị ra màn hình ngoài
+        if st.session_state.group_zip_path:
+            st.success(st.session_state.group_msg)
+            with open(st.session_state.group_zip_path, "rb") as f:
+                st.download_button(
+                    label="📥 Tải xuống File ZIP kết quả",
+                    data=f.read(),
+                    file_name="Ket_Qua_Gom_Nhom_PDF.zip",
+                    mime="application/zip"
+                )
