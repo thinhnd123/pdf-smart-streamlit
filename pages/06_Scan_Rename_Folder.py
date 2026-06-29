@@ -49,7 +49,10 @@ naming_options = {
     "Tên + Mã xuất xưởng": "ten_ma_xuat_xuong",
     "Tên + Đặc trưng": "ten_dac_trung",
     "Tên + Model + NSX": "ten_model_nsx",
-    "Tên + Model + Đặc trưng": "ten_model_dac_trung"
+    "Tên + Model + Đặc trưng": "ten_model_dac_trung",
+    "Tên + Mã quản lý": "ten_ma_ql",
+    "Tên trước dấu / + Mã quản lý": "ten_truoc_slash_ma_ql",
+    "Tên sau dấu / + Mã quản lý": "ten_sau_slash_ma_ql",
 }
 
 selected_label = st.selectbox(
