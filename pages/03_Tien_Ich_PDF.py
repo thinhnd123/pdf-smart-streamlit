@@ -1,6 +1,6 @@
 import streamlit as st
 import tempfile
-
+import math
 import fitz
 from PIL import Image
 import io
@@ -112,7 +112,16 @@ with tab1:
 # ==================================================
 # TAB 2-7 (tạm thời placeholder)
 # ==================================================
+def next_thumb_page():
+    if st.session_state.thumb_page < st.session_state.total_thumb_pages:
+        st.session_state.thumb_page += 1
 
+
+def prev_thumb_page():
+    if st.session_state.thumb_page > 1:
+        st.session_state.thumb_page -= 1
+        
+        
 with tab2:
 
     st.subheader("✂️ Tách PDF theo điểm cắt")
@@ -125,68 +134,166 @@ with tab2:
 
     if uploaded_pdf:
 
-        with tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=".pdf"
-        ) as tmp:
+        if "split_pdf_path" not in st.session_state:
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                suffix=".pdf"
+            ) as tmp:
 
-            tmp.write(uploaded_pdf.getvalue())
+                tmp.write(
+                    uploaded_pdf.getvalue()
+                )
 
-            pdf_path = tmp.name
+                st.session_state.split_pdf_path = tmp.name
 
-        doc = fitz.open(pdf_path)
+        pdf_path = st.session_state.split_pdf_path
+
+        pdf_bytes = uploaded_pdf.getvalue()
+
+        doc = fitz.open(
+            stream=pdf_bytes,
+            filetype="pdf"
+        )
 
         total_pages = len(doc)
+        doc.close()
 
         st.info(
             f"Tổng số trang: {total_pages}"
         )
 
-        st.markdown("### Chọn các trang kết thúc hồ sơ")
+        if "cut_pages" not in st.session_state:
+            st.session_state.cut_pages = []
 
-        cut_pages = []
+        # ==========================
+        # PAGINATION THUMBNAIL
+        # ==========================
+
+        thumb_per_page = 50
+
+        total_thumb_pages = max(
+            1,
+            math.ceil(
+                total_pages / thumb_per_page
+            )
+        )
+        
+        st.session_state.total_thumb_pages = total_thumb_pages
+
+        col1, col2, col3 = st.columns(
+            [2, 2, 6]
+        )
+
+        if "thumb_page" not in st.session_state:
+            st.session_state.thumb_page = 1
+
+        with col1:
+            st.number_input(
+                "Trang preview",
+                min_value=1,
+                max_value=total_thumb_pages,
+                key="thumb_page"
+            )
+
+        thumb_page = st.session_state.thumb_page
+
+        with col2:
+            st.markdown(
+                f"""
+                <div style='margin-top:32px'>
+                {total_thumb_pages} trang preview
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        start_idx = (
+            thumb_page - 1
+        ) * thumb_per_page
+
+        end_idx = min(
+            start_idx + thumb_per_page,
+            total_pages
+        )
+
+        st.markdown(
+            "### Chọn các trang kết thúc hồ sơ"
+        )
 
         cols = st.columns(4)
 
-        for page_num in range(total_pages):
+        for idx in range(
+            start_idx,
+            end_idx
+        ):
 
-            page = doc[page_num]
-
-            pix = page.get_pixmap(
-                matrix=fitz.Matrix(
-                    0.3,
-                    0.3
-                )
+            from utils.pdf_thumbnail_cache import (
+                get_thumbnail
             )
 
-            img = Image.open(
-                io.BytesIO(
-                    pix.tobytes("png")
-                )
+            img = get_thumbnail(
+                pdf_bytes,
+                idx
             )
 
-            with cols[page_num % 4]:
+            with cols[
+                (idx - start_idx) % 4
+            ]:
 
                 st.image(
                     img,
-                    caption=f"Trang {page_num + 1}"
+                    caption=f"Trang {idx + 1}"
                 )
 
-                checked = st.checkbox(
+                checked = st.toggle(
                     "✂ Cắt tại đây",
-                    key=f"cut_{page_num}"
+                    value=(
+                        idx + 1
+                        in st.session_state.cut_pages
+                    ),
+                    key=f"cut_{idx}"
                 )
 
                 if checked:
+                    if (
+                        idx + 1
+                        not in st.session_state.cut_pages
+                    ):
+                        st.session_state.cut_pages.append(
+                            idx + 1
+                        )
 
-                    cut_pages.append(
-                        page_num + 1
-                    )
-
-        doc.close()
+                else:
+                    if (
+                        idx + 1
+                        in st.session_state.cut_pages
+                    ):
+                        st.session_state.cut_pages.remove(
+                            idx + 1
+                        )
 
         st.markdown("---")
 
+        col_prev, col_next = st.columns(2)
+
+        with col_prev:
+            st.button(
+                "⬅ Previous",
+                on_click=prev_thumb_page,
+                key="prev_thumb_page"
+            )
+
+        with col_next:
+            st.button(
+                "Next ➡",
+                on_click=next_thumb_page,
+                key="next_thumb_page"
+            )
+                    
+        cut_pages = sorted(
+            st.session_state.cut_pages
+        )
+        
         if cut_pages:
 
             cut_pages = sorted(
@@ -258,6 +365,8 @@ with tab2:
                 )
 
             if zip_path:
+                
+                st.session_state.cut_pages = []
 
                 st.success(
                     msg
