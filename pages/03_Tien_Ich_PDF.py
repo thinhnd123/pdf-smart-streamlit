@@ -112,6 +112,16 @@ with tab1:
 # ==================================================
 # TAB 2-7 (tạm thời placeholder)
 # ==================================================
+# Giữ nguyên hàm cache của bạn
+@st.cache_data(show_spinner=False)
+def get_thumbnail(pdf_bytes, page_num, zoom=0.25):
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    page = doc.load_page(page_num)
+    pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom))
+    img = Image.open(io.BytesIO(pix.tobytes("png")))
+    doc.close()
+    return img
+
 def next_thumb_page():
     if st.session_state.thumb_page < st.session_state.total_thumb_pages:
         st.session_state.thumb_page += 1
@@ -122,8 +132,10 @@ def prev_thumb_page():
         st.session_state.thumb_page -= 1
         
         
+# ==========================================
+#  ĐOẠN CODE TRONG TAB 2
+# ==========================================
 with tab2:
-
     st.subheader("✂️ Tách PDF theo điểm cắt")
 
     uploaded_pdf = st.file_uploader(
@@ -133,34 +145,19 @@ with tab2:
     )
 
     if uploaded_pdf:
-
         if "split_pdf_path" not in st.session_state:
-            with tempfile.NamedTemporaryFile(
-                delete=False,
-                suffix=".pdf"
-            ) as tmp:
-
-                tmp.write(
-                    uploaded_pdf.getvalue()
-                )
-
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(uploaded_pdf.getvalue())
                 st.session_state.split_pdf_path = tmp.name
 
         pdf_path = st.session_state.split_pdf_path
-
         pdf_bytes = uploaded_pdf.getvalue()
 
-        doc = fitz.open(
-            stream=pdf_bytes,
-            filetype="pdf"
-        )
-
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         total_pages = len(doc)
         doc.close()
 
-        st.info(
-            f"Tổng số trang: {total_pages}"
-        )
+        st.info(f"Tổng số trang: {total_pages}")
 
         if "cut_pages" not in st.session_state:
             st.session_state.cut_pages = []
@@ -168,21 +165,11 @@ with tab2:
         # ==========================
         # PAGINATION THUMBNAIL
         # ==========================
-
         thumb_per_page = 50
-
-        total_thumb_pages = max(
-            1,
-            math.ceil(
-                total_pages / thumb_per_page
-            )
-        )
-        
+        total_thumb_pages = max(1, math.ceil(total_pages / thumb_per_page))
         st.session_state.total_thumb_pages = total_thumb_pages
 
-        col1, col2, col3 = st.columns(
-            [2, 2, 6]
-        )
+        col1, col2, col3 = st.columns([2, 2, 6])
 
         if "thumb_page" not in st.session_state:
             st.session_state.thumb_page = 1
@@ -199,90 +186,69 @@ with tab2:
 
         with col2:
             st.markdown(
-                f"""
-                <div style='margin-top:32px'>
-                {total_thumb_pages} trang preview
-                </div>
-                """,
+                f"<div style='margin-top:32px'>{total_thumb_pages} trang preview</div>",
                 unsafe_allow_html=True
             )
 
-        start_idx = (
-            thumb_page - 1
-        ) * thumb_per_page
+        start_idx = (thumb_page - 1) * thumb_per_page
+        end_idx = min(start_idx + thumb_per_page, total_pages)
 
-        end_idx = min(
-            start_idx + thumb_per_page,
-            total_pages
-        )
+        # =============================================================
+        # BỌC LƯỚI ẢNH VÀ TOGGLE VÀO TRONG ST.FORM
+        # Người dùng có thể bấm thoải mái 50 toggle mà không bị load lại trang
+        # =============================================================
+        with st.form(key="pdf_cut_nodes_form"):
+            st.markdown("### Chọn các trang kết thúc hồ sơ")
+            cols = st.columns(4)
+            
+            # Tạo một dictionary tạm để lưu trạng thái toggle hiện tại trong form
+            current_form_states = {}
 
-        st.markdown(
-            "### Chọn các trang kết thúc hồ sơ"
-        )
+            for idx in range(start_idx, end_idx):
+                from utils.pdf_thumbnail_cache import get_thumbnail
+                img = get_thumbnail(pdf_bytes, idx)
 
-        cols = st.columns(4)
+                with cols[(idx - start_idx) % 4]:
+                    st.image(img, caption=f"Trang {idx + 1}")
 
-        for idx in range(
-            start_idx,
-            end_idx
-        ):
+                    # Lưu trạng thái toggle vào dictionary tạm, key là số trang thực tế (idx + 1)
+                    current_form_states[idx + 1] = st.toggle(
+                        "✂ Cắt tại đây",
+                        value=(idx + 1 in st.session_state.cut_pages),
+                        key=f"cut_{idx}"
+                    )
 
-            from utils.pdf_thumbnail_cache import (
-                get_thumbnail
-            )
+            st.markdown("<br>", unsafe_allow_html=True)
+            # Nút submit bắt buộc của Form để áp dụng các điểm cắt
+            submit_cuts = st.form_submit_button("💾 Xác nhận & Lưu điểm cắt của trang này")
 
-            img = get_thumbnail(
-                pdf_bytes,
-                idx
-            )
+            if submit_cuts:
+                # Duyệt qua các toggle trong form và cập nhật chính xác vào cut_pages gốc
+                for page_num, checked in current_form_states.items():
+                    if checked:
+                        if page_num not in st.session_state.cut_pages:
+                            st.session_state.cut_pages.append(page_num)
+                    else:
+                        if page_num in st.session_state.cut_pages:
+                            st.session_state.cut_pages.remove(page_num)
+                
+                # Ép ứng dụng rerun một lần duy nhất để cập nhật bảng "Khoảng trang tự sinh" bên dưới
+                st.rerun()
 
-            with cols[
-                (idx - start_idx) % 4
-            ]:
-
-                st.image(
-                    img,
-                    caption=f"Trang {idx + 1}"
-                )
-
-                checked = st.toggle(
-                    "✂ Cắt tại đây",
-                    value=(
-                        idx + 1
-                        in st.session_state.cut_pages
-                    ),
-                    key=f"cut_{idx}"
-                )
-
-                if checked:
-                    if (
-                        idx + 1
-                        not in st.session_state.cut_pages
-                    ):
-                        st.session_state.cut_pages.append(
-                            idx + 1
-                        )
-
-                else:
-                    if (
-                        idx + 1
-                        in st.session_state.cut_pages
-                    ):
-                        st.session_state.cut_pages.remove(
-                            idx + 1
-                        )
+        # =============================================================
+        # KẾT THÚC VÙNG FORM
+        # =============================================================
 
         st.markdown("---")
 
+        # Nút chuyển trang preview lớn (Nằm ngoài form)
         col_prev, col_next = st.columns(2)
-
         with col_prev:
             st.button(
                 "⬅ Previous",
                 on_click=prev_thumb_page,
                 key="prev_thumb_page"
             )
-
         with col_next:
             st.button(
                 "Next ➡",
@@ -290,105 +256,57 @@ with tab2:
                 key="next_thumb_page"
             )
                     
-        cut_pages = sorted(
-            st.session_state.cut_pages
-        )
+        # Xử lý hiển thị khoảng trang tự sinh (Giữ nguyên logic của bạn)
+        cut_pages = sorted(st.session_state.cut_pages)
         
         if cut_pages:
-
-            cut_pages = sorted(
-                list(
-                    set(cut_pages)
-                )
-            )
-
+            cut_pages = sorted(list(set(cut_pages)))
             ranges = []
-
             start_page = 1
 
             for end_page in cut_pages:
-
-                ranges.append(
-                    f"{start_page}-{end_page}"
-                )
-
+                ranges.append(f"{start_page}-{end_page}")
                 start_page = end_page + 1
 
             if start_page <= total_pages:
+                ranges.append(f"{start_page}-{total_pages}")
 
-                ranges.append(
-                    f"{start_page}-{total_pages}"
-                )
+            generated_text = "\n".join(ranges)
 
-            generated_text = "\n".join(
-                ranges
-            )
-
-            st.markdown(
-                "### Khoảng trang tự sinh"
-            )
-
-            st.code(
-                generated_text
-            )
-
+            st.markdown("### Khoảng trang tự sinh")
+            st.code(generated_text)
         else:
-
             generated_text = ""
-
-            st.warning(
-                "Chưa chọn điểm cắt nào"
-            )
+            st.warning("Chưa chọn điểm cắt nào")
 
         st.markdown("---")
 
-        if st.button(
-            "🚀 Tách PDF",
-            key="split_by_checkbox"
-        ):
-
+        # Nút bấm tiến hành Tách PDF (Giữ nguyên logic của bạn)
+        if st.button("🚀 Tách PDF", key="split_by_checkbox"):
             if not generated_text:
-
-                st.error(
-                    "Vui lòng chọn ít nhất 1 điểm cắt"
-                )
-
+                st.error("Vui lòng chọn ít nhất 1 điểm cắt")
                 st.stop()
 
-            with st.spinner(
-                "Đang tách PDF..."
-            ):
-
+            with st.spinner("Đang tách PDF..."):
                 zip_path, msg = run_pdf_split_range(
                     pdf_path,
                     generated_text
                 )
 
             if zip_path:
-                
                 st.session_state.cut_pages = []
+                st.success(msg)
 
-                st.success(
-                    msg
-                )
-
-                with open(
-                    zip_path,
-                    "rb"
-                ) as f:
-
+                with open(zip_path, "rb") as f:
                     st.download_button(
                         "📥 Tải ZIP",
                         data=f.read(),
                         file_name="Split.zip",
                         mime="application/zip"
                     )
-
             else:
-
-                st.error(
-                    msg
-                )
+                st.error(msg)
+                
 with tab3:
 
     st.subheader(
