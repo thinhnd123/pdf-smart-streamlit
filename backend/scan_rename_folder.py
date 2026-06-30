@@ -16,61 +16,63 @@ def extract_gcn_exact(text, excel_gcn_list):
         return None
 
     text = text.upper()
+    # Regex mở rộng: bốc toàn bộ chuỗi có cấu trúc GCN, chấp nhận cả 0 lẫn O lộn xộn
     candidates = re.findall(
-        r'C\d{6}[- ]?[A-Z0-9]{1,2}[- ]?\d{4,6}',
+        r'C\d{6}[- ]?[A-Z0-9]{1,2}[- ]?[A-Z0-9]{4,6}',
         text
     )
 
     if not candidates:
         return None
 
+    # Chuẩn hóa danh sách Excel (Giữ nguyên làm sạch nền)
     excel_map = {}
     for gcn in excel_gcn_list:
         if not gcn:
             continue
-
-        norm = re.sub(
-            r'[-\s\.]',
-            '',
-            str(gcn).upper()
-        )
+        norm = re.sub(r'[-\s\.]', '', str(gcn).upper())
         excel_map[norm] = str(gcn).upper()
 
     for candidate in candidates:
-        norm_candidate = re.sub(
-            r'[-\s\.]',
-            '',
-            candidate.upper()
-        )
+        norm_candidate = re.sub(r'[-\s\.]', '', candidate.upper())
 
-        # =====================================
-        # MATCH CHÍNH XÁC
-        # =====================================
-        if norm_candidate in excel_map:
-            print(
-                f"EXACT MATCH: "
-                f"{candidate} -> "
-                f"{excel_map[norm_candidate]}"
-            )
-            return excel_map[norm_candidate]
+        # =========================================================
+        # TẠO DANH SÁCH BIẾN THỂ (THỬ HẾT ĐỂ KHÔNG SÓT)
+        # =========================================================
+        possible_variants = []
 
-        # =====================================
-        # OCR nhầm ký tự đầu tiên sau dấu -
-        # =====================================
-        if re.match(r'^C\d{6}[0-9]', norm_candidate):
-            fixed_candidate = (
-                norm_candidate[:7]
-                + "O"
-                + norm_candidate[8:]
-            )
+        # 1. Thêm chuỗi gốc từ OCR quét được vào đầu tiên
+        possible_variants.append(norm_candidate)
 
-            if fixed_candidate in excel_map:
-                print(
-                    f"FIXED MATCH (0->O): "
-                    f"{candidate} -> "
-                    f"{excel_map[fixed_candidate]}"
-                )
-                return excel_map[fixed_candidate]
+        if len(norm_candidate) >= 8:
+            phan_he = norm_candidate[7]
+            so_seri = norm_candidate[8:]
+
+            # 2. Biến thể cho lỗi cũ (0 -> O ở phân hệ)
+            if phan_he.isdigit():
+                variant_O = norm_candidate[:7] + "O" + so_seri
+                possible_variants.append(variant_O)
+
+            # 3. Biến thể cho lỗi mới (O -> 0 ở số seri)
+            if "O" in so_seri:
+                variant_0 = norm_candidate[:7] + phan_he + so_seri.replace("O", "0")
+                possible_variants.append(variant_0)
+
+            # 4. Biến thể "Kịch độc": Bị lỗi cả 2 chỗ cùng lúc (Ví dụ: OCR ra C2026050MO123)
+            # Thử vừa sửa phân hệ thành O, vừa sửa seri thành 0
+            variant_both = norm_candidate[:7] + "O" + so_seri.replace("O", "0")
+            possible_variants.append(variant_both)
+
+        # =========================================================
+        # VÒNG LẶP DÒ TÌM TRONG EXCEL
+        # =========================================================
+        # Loại bỏ các chuỗi trùng lặp trong danh sách biến thể nếu có
+        possible_variants = list(dict.fromkeys(possible_variants))
+
+        for variant in possible_variants:
+            if variant in excel_map:
+                print(f"🎯 MATCH THÀNH CÔNG (Variant: {variant}): {candidate} -> {excel_map[variant]}")
+                return excel_map[variant]
 
     return None
 
