@@ -132,7 +132,22 @@ def next_thumb_page():
 def prev_thumb_page():
     if st.session_state.thumb_page > 1:
         st.session_state.thumb_page -= 1
-        
+  
+def reset_split_state():
+    """Xóa toàn bộ bộ nhớ tạm của file cũ khi người dùng upload file mới hoặc bấm X xóa file"""
+    if "cut_pages" in st.session_state:
+        st.session_state.cut_pages = []
+    if "split_pdf_path" in st.session_state:
+        # Nếu muốn xóa triệt để file tạm trong ổ cứng để đỡ nặng máy:
+        import os
+        try:
+            if os.path.exists(st.session_state.split_pdf_path):
+                os.remove(st.session_state.split_pdf_path)
+        except:
+            pass
+        del st.session_state.split_pdf_path
+    if "thumb_page" in st.session_state:
+        st.session_state.thumb_page = 1        
         
 # ==========================================
 #  ĐOẠN CODE TRONG TAB 2
@@ -143,7 +158,8 @@ with tab2:
     uploaded_pdf = st.file_uploader(
         "Chọn PDF",
         type=["pdf"],
-        key="split_pdf"
+        key="split_pdf",
+        on_change=reset_split_state
     )
 
     if uploaded_pdf:
