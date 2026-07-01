@@ -30,3 +30,7 @@ Thumbs.db
 build/
 dist/
 *.spec
+
+# Chặn file cài đặt exe của Inno Setup
+*.iss
+PDF_Smart_Setup.exe
