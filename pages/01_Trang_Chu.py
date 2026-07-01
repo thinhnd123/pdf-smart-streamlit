@@ -1,4 +1,11 @@
 import streamlit as st
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from security import check_security
+
+# Gọi hàm kiểm tra ngay đầu trang!
+check_security()
 
 st.title("🚀 HỆ THỐNG QUẢN TRỊ & XỬ LÝ HỒ SƠ THÔNG MINH")
 

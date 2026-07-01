@@ -5,6 +5,13 @@ from pathlib import Path
 
 from services.smart_split_service import run_smart_split
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from security import check_security
+
+# Gọi hàm kiểm tra ngay đầu trang!
+check_security()
 
 st.title("🧠 Tách PDF Thông Minh")
 

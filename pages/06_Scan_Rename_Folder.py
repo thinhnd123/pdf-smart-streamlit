@@ -9,6 +9,14 @@ import time
 # Import cả 2 hàm xử lý của Tab 1 và Tab 2 độc lập từ Service của bạn
 from services.scan_rename_service import run_scan_rename, run_auto_split_rename
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from security import check_security
+
+# Gọi hàm kiểm tra ngay đầu trang!
+check_security()
+
 st.title("📂 Hệ Thống Xử Lý PDF Scan Thông Minh")
 
 st.markdown("""

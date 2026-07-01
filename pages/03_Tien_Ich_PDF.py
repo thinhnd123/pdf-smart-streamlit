@@ -32,6 +32,13 @@ from services.remove_blank_page_service import (
 from services.remove_blank_pages_v2_service import (
     run_remove_blank_pages_batch
 )
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from security import check_security
+
+# Gọi hàm kiểm tra ngay đầu trang!
+check_security()
 
 st.title("🛠️ TIỆN ÍCH PDF")
 

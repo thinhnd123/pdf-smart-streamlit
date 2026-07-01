@@ -26,6 +26,14 @@ from services.excel_audit_service import (
     run_data_audit
 )
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from security import check_security
+
+# Gọi hàm kiểm tra ngay đầu trang!
+check_security()
+
 st.title(
     "📊 TIỆN ÍCH EXCEL"
 )

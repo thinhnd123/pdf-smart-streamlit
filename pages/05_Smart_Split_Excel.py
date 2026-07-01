@@ -4,7 +4,13 @@ from utils.file_helper import save_uploaded_file
 
 from pathlib import Path
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from security import check_security
 
+# Gọi hàm kiểm tra ngay đầu trang!
+check_security()
 
 
 st.set_page_config(

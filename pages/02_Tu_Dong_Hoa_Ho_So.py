@@ -14,7 +14,13 @@ from services.pdf_group_duplicate_service import (
     run_group_duplicate_files
 )
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from security import check_security
 
+# Gọi hàm kiểm tra ngay đầu trang!
+check_security()
 
 st.title(
     "📂 TỰ ĐỘNG HÓA HỒ SƠ"
