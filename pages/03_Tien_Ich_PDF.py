@@ -683,95 +683,48 @@ with tab6:
             st.error(msg)
 
 with tab7:
-
-    st.subheader(
-        "🧹 Xoá trang trắng (Hàng loạt)"
-    )
+    st.subheader("🧹 Xóa trang trắng (Hàng loạt trực tiếp từ RAM)")
 
     uploaded_pdfs = st.file_uploader(
-        "Chọn PDF",
+        "Chọn các file PDF cần lọc trang trắng",
         type=["pdf"],
         accept_multiple_files=True,
         key="remove_blank_batch"
     )
 
     threshold = st.slider(
-        "Độ nhạy",
-        0.90,
-        1.00,
-        0.98,
-        0.01
+        "Mật độ điểm trắng tối thiểu để coi là trang trống (%)",
+        95.0, 100.0, 98.0, 0.1,
+        help="98% có nghĩa là nếu trang giấy có trên 98% là màu trắng (chỉ có dưới 2% vết mực/nhiễu/logo), trang đó sẽ bị xóa."
     )
 
     if uploaded_pdfs:
+        st.info(f"📁 Đã chọn {len(uploaded_pdfs)} tệp tin.")
 
-        st.info(
-            f"Đã chọn {len(uploaded_pdfs)} file"
-        )
-
-    if st.button(
-        "🚀 Xử lý hàng loạt",
-        key="remove_blank_batch_btn"
-    ):
-
+    if st.button("🚀 Xử lý xóa trang trắng hàng loạt", key="remove_blank_batch_btn"):
         if not uploaded_pdfs:
-
-            st.error(
-                "Vui lòng chọn file"
-            )
-
+            st.error("⚠️ Vui lòng chọn ít nhất 1 file PDF.")
             st.stop()
 
-        temp_paths = []
+        with st.spinner("⏳ Hệ thống đang dựng ảnh và phân tích mật độ mực từng trang..."):
+            try:
+                # 🔥 ĐÃ SỬA: Truyền trực tiếp mảng file upload nhị phân từ RAM (Không tạo file tạm nữa)
+                # Chia cho 100 để đổi từ % (98.0) về dạng thập phân (0.98) khớp với Backend
+                zip_buffer, report = run_remove_blank_pages_batch(uploaded_pdfs, threshold / 100.0)
+                
+                st.success("🎉 Đã lọc sạch các trang trống hoàn tất!")
+                st.text_area("📊 Báo cáo chi tiết kết quả lọc:", report, height=200)
 
-        for file in uploaded_pdfs:
-
-            with tempfile.NamedTemporaryFile(
-                delete=False,
-                suffix=".pdf"
-            ) as tmp:
-
-                tmp.write(
-                    file.getvalue()
-                )
-
-                temp_paths.append(
-                    tmp.name
-                )
-
-        with st.spinner(
-            "Đang xử lý..."
-        ):
-
-            zip_path, report = (
-                run_remove_blank_pages_batch(
-                    temp_paths,
-                    threshold
-                )
-            )
-
-        st.success(
-            "Hoàn thành"
-        )
-
-        st.text_area(
-            "Kết quả",
-            report,
-            height=250
-        )
-
-        with open(
-            zip_path,
-            "rb"
-        ) as f:
-
-            st.download_button(
-                "📥 Tải ZIP",
-                data=f.read(),
-                file_name="BlankRemoved.zip",
-                mime="application/zip"
-            )
-            
+                if zip_buffer:
+                    st.download_button(
+                        label="📥 Tải về file nén kết quả (.ZIP)",
+                        data=zip_buffer.getvalue(),
+                        file_name="BlankRemoved_RAM.zip",
+                        mime="application/zip",
+                        use_container_width=True
+                    )
+            except Exception as e:
+                st.exception(e)
             
 with tab8: # Hoặc tab8 tùy bạn đặt tên
     st.subheader("📂 Phân loại & Gom nhóm PDF theo danh mục Excel")
