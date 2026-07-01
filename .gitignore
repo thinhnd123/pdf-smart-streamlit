@@ -25,3 +25,8 @@ output_split_scan/
 # OS
 Thumbs.db
 .DS_Store
+
+# Chặn hoàn toàn các thư mục sinh ra do đóng gói PyInstaller
+build/
+dist/
+*.spec

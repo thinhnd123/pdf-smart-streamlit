@@ -24,7 +24,7 @@ import logging
 import warnings
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+import sys
 import fitz  # PyMuPDF
 import pandas as pd
 import numpy as np
@@ -38,8 +38,15 @@ from PIL import Image, ImageEnhance
 warnings.filterwarnings("ignore")
 logging.getLogger("PIL").setLevel(logging.ERROR)
 
-# Đường dẫn đến Tesseract (sửa nếu cần)
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# 🎯 ĐOẠN CẤU HÌNH ĐƯỜNG DẪN SCAN TỰ ĐỘNG:
+if getattr(sys, 'frozen', False):
+    # Nếu đang chạy từ file .EXE đã đóng gói cài vào máy khách
+    base_path = sys._MEIPASS
+    tesseract_exe_path = os.path.join(base_path, 'Tesseract-OCR', 'tesseract.exe')
+    pytesseract.pytesseract.tesseract_cmd = tesseract_exe_path
+else:
+    # Nếu đang chạy Local bằng lệnh streamlit run ở máy của bạn
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 
 # ============================================================
