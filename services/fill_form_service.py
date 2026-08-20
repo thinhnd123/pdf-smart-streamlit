@@ -69,6 +69,16 @@ def get_row_index(cell_name):
 # ==============================================================================
 # QUÉT DỮ LIỆU TỪ TỆP PDF
 # ==============================================================================
+# Danh sách pattern nhận diện mã tài liệu (Cấu hình mở rộng tại đây)
+PATTERNS = [
+    r'[A-Za-z0-9]+/[A-Za-z0-9\(\)\-]+',        # Dạng cũ: GST/TD(B)-L001
+    r'[A-Za-z0-9]+(?:_[A-Za-z0-9]+)+-[0-9]+',   # Dạng mới: GST_DL_E020-2025, GST_DL_L026-2026
+    # r'PATTERN_MOI_TRONG_TUONG_LAI',          # Thêm quy tắc mới vào đây khi cần
+]
+
+# Gộp các pattern thành một biểu thức Regex duy nhất bằng toán tử OR (|)
+COMBINED_PATTERN = re.compile("|".join(f"(?:{p})" for p in PATTERNS))
+
 def extract_code_from_pdf(pdf_file_obj):
     """Đọc PDF từ bộ nhớ/máy tạm và nhặt tất cả mã quy trình tại Mục 4"""
     try:
@@ -92,9 +102,9 @@ def extract_code_from_pdf(pdf_file_obj):
                     break
 
                 if found_section_4 and line_str:
-                    match = re.search(r'([A-Za-z0-9]+/[A-Za-z0-9\(\)\-]+)', line_str)
-                    if match:
-                        code = match.group(1)
+                    # Tìm tất cả các mã khớp với danh sách PATTERNS trên từng dòng
+                    matches = COMBINED_PATTERN.findall(line_str)
+                    for code in matches:
                         if code not in extracted_codes:
                             extracted_codes.append(code)
 
